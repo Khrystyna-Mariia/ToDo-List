@@ -1,0 +1,301 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.app {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 22px;
+  color: #2d2d2d;
+  text-align: center;
+}
+
+.task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.task-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.task-form input:focus {
+  outline: none;
+  border-color: #764ba2;
+}
+
+.task-form button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #764ba2;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.task-form button:hover {
+  background: #5f3a86;
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.filter-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  background: #f7f7f9;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #555;
+}
+
+.filter-btn.active {
+  background: #764ba2;
+  color: #fff;
+  border-color: #764ba2;
+}
+
+.progress-wrap {
+  height: 8px;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #764ba2, #667eea);
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.progress-label {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+}
+
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 999;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation: confetti-fall 900ms ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.task-item {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+
+.task-item.just-completed {
+  animation: task-pulse 0.4s ease;
+}
+
+@keyframes task-pulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.03); box-shadow: 0 6px 16px rgba(118, 75, 162, 0.25); }
+  100% { transform: scale(1); }
+}
+
+/* Кастомний чекбокс з анімованою галочкою */
+.check-wrap {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.check-wrap input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.check-box {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #c9c2da;
+  border-radius: 7px;
+  background: #fff;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+}
+
+.check-wrap input:checked ~ .check-box {
+  background: #764ba2;
+  border-color: #764ba2;
+}
+
+.check-wrap:active .check-box {
+  transform: scale(0.88);
+}
+
+.check-icon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.check-icon path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  transition: stroke-dashoffset 0.25s ease 0.05s;
+}
+
+.check-wrap input:checked ~ .check-icon path {
+  stroke-dashoffset: 0;
+}
+
+.task-text {
+  flex: 1;
+  font-size: 15px;
+  color: #333;
+  word-break: break-word;
+  cursor: text;
+  position: relative;
+}
+
+.task-item.completed .task-text {
+  color: #aaa;
+}
+
+.task-text::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1px;
+  width: 0;
+  background: #aaa;
+  transition: width 0.35s ease;
+}
+
+.task-item.completed .task-text::after {
+  width: 100%;
+}
+
+.delete-btn {
+  border: none;
+  background: none;
+  color: #c0392b;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.delete-btn:hover {
+  background: #fdecea;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  margin: 20px 0;
+}
+
+.error-state {
+  text-align: center;
+  color: #c0392b;
+  font-size: 14px;
+  background: #fdecea;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #777;
+}
+
+.clear-btn {
+  border: none;
+  background: none;
+  color: #764ba2;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+}
