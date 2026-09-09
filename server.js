@@ -9,10 +9,19 @@ const DATA_FILE = path.join(__dirname, 'data', 'tasks.json');
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+const VALID_STATUSES = ['todo', 'in_progress', 'paused', 'done'];
+const VALID_PRIORITIES = ['low', 'medium', 'high'];
+
 async function readTasks() {
   try {
     const raw = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const tasks = JSON.parse(raw);
+    return tasks.map((t) => ({
+      ...t,
+      status: VALID_STATUSES.includes(t.status) ? t.status : t.completed ? 'done' : 'todo',
+      completed: t.status === 'done' || Boolean(t.completed),
+      priority: VALID_PRIORITIES.includes(t.priority) ? t.priority : 'medium',
+    }));
   } catch (err) {
     if (err.code === 'ENOENT') {
       await fs.writeFile(DATA_FILE, '[]', 'utf-8');
@@ -57,9 +66,12 @@ app.get('/api/tasks', async (req, res) => {
 // Додати нове завдання
 app.post('/api/tasks', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, priority } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ error: 'Текст завдання не може бути порожнім' });
+    }
+    if (priority !== undefined && !VALID_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ error: 'Некоректний пріоритет завдання' });
     }
 
     const newTask = await runExclusive(async () => {
@@ -67,7 +79,9 @@ app.post('/api/tasks', async (req, res) => {
       const task = {
         id: generateId(),
         text: text.trim(),
+        status: 'todo',
         completed: false,
+        priority: priority || 'medium',
         createdAt: new Date().toISOString(),
       };
       tasks.push(task);
@@ -82,11 +96,18 @@ app.post('/api/tasks', async (req, res) => {
   }
 });
 
-// Оновити завдання (текст та/або статус виконання)
+// Оновити завдання (текст, статус та/або пріоритет)
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { text, completed } = req.body;
+    const { text, completed, status, priority } = req.body;
+
+    if (status !== undefined && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Некоректний статус завдання' });
+    }
+    if (priority !== undefined && !VALID_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ error: 'Некоректний пріоритет завдання' });
+    }
 
     const result = await runExclusive(async () => {
       const tasks = await readTasks();
@@ -99,8 +120,15 @@ app.put('/api/tasks/:id', async (req, res) => {
       if (typeof text === 'string' && text.trim()) {
         task.text = text.trim();
       }
-      if (typeof completed === 'boolean') {
+      if (status !== undefined) {
+        task.status = status;
+        task.completed = status === 'done';
+      } else if (typeof completed === 'boolean') {
         task.completed = completed;
+        task.status = completed ? 'done' : 'todo';
+      }
+      if (priority !== undefined) {
+        task.priority = priority;
       }
 
       await writeTasks(tasks);

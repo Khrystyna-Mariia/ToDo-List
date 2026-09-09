@@ -8,23 +8,76 @@ body {
   display: flex;
   justify-content: center;
   padding: 40px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+  position: relative;
+}
+
+/* Фонові шари: показуємо активний залежно від того, яка колонка
+   (статус) наразі має найбільше завдань. Перехід — плавним crossfade. */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  background-size: 300% 300%;
+  animation: gradient-shift 14s ease infinite;
+  transition: opacity 1s ease;
+}
+
+.bg-layer.active {
+  opacity: 1;
+}
+
+.bg-default {
+  background-image: linear-gradient(120deg, #667eea, #764ba2, #a855f7, #667eea);
+}
+
+.bg-todo {
+  background-image: linear-gradient(120deg, #9ca3af, #6b7280, #4b5563, #9ca3af);
+}
+
+.bg-in_progress {
+  background-image: linear-gradient(120deg, #6366f1, #4338ca, #818cf8, #6366f1);
+}
+
+.bg-paused {
+  background-image: linear-gradient(120deg, #f59e0b, #d97706, #fbbf24, #f59e0b);
+}
+
+.bg-done {
+  background-image: linear-gradient(120deg, #10b981, #059669, #34d399, #10b981);
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .app {
   width: 100%;
-  max-width: 480px;
+  max-width: 880px;
   background: #fff;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 28px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+  animation: app-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes app-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 h1 {
   margin: 0 0 20px;
   font-size: 22px;
-  color: #2d2d2d;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  background: linear-gradient(90deg, #764ba2, #667eea);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   text-align: center;
 }
 
@@ -40,11 +93,32 @@ h1 {
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 15px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .task-form input:focus {
   outline: none;
   border-color: #764ba2;
+  box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.15);
+}
+
+.priority-input {
+  padding: 10px 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.priority-input:focus {
+  outline: none;
+  border-color: #764ba2;
+  box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.15);
 }
 
 .task-form button {
@@ -54,35 +128,18 @@ h1 {
   background: #764ba2;
   color: #fff;
   font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.1s;
 }
 
 .task-form button:hover {
   background: #5f3a86;
 }
 
-.filters {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.filter-btn {
-  flex: 1;
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  background: #f7f7f9;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #555;
-}
-
-.filter-btn.active {
-  background: #764ba2;
-  color: #fff;
-  border-color: #764ba2;
+.task-form button:active {
+  transform: scale(0.96);
 }
 
 .progress-wrap {
@@ -131,108 +188,127 @@ h1 {
   }
 }
 
-.task-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.column {
+  background: #f7f7fa;
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 60px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 40px;
 }
 
-.task-item {
+.column-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  padding: 4px 6px 6px;
+  border-bottom: 2px solid transparent;
+}
+
+.column-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.column-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.08);
+  color: #666;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.column[data-status="todo"] .column-header { color: #6b6b76; border-color: #d8d8dd; }
+.column[data-status="in_progress"] .column-header { color: #4338ca; border-color: #c7d2fe; }
+.column[data-status="paused"] .column-header { color: #b45309; border-color: #fde68a; }
+.column[data-status="done"] .column-header { color: #047857; border-color: #a7f3d0; }
+
+.column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 8px;
+}
+
+.column-empty {
+  font-size: 12px;
+  color: #b5b5bd;
+  text-align: center;
+  padding: 10px 4px;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+}
+
+.task-card {
+  background: #fff;
   border: 1px solid #eee;
+  border-left: 4px solid #d1d5db;
   border-radius: 10px;
-  background: #fafafa;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease,
+    border-color 0.2s ease;
+  animation: task-enter 0.25s ease;
 }
 
-.task-item {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+.task-card[data-priority="high"] { border-left-color: #ef4444; }
+.task-card[data-priority="medium"] { border-left-color: #f59e0b; }
+.task-card[data-priority="low"] { border-left-color: #22c55e; }
+
+.task-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
-.task-item.just-completed {
+@keyframes task-enter {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.task-card.removing {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.task-card.just-completed {
   animation: task-pulse 0.4s ease;
 }
 
 @keyframes task-pulse {
   0% { transform: scale(1); }
-  35% { transform: scale(1.03); box-shadow: 0 6px 16px rgba(118, 75, 162, 0.25); }
+  35% { transform: scale(1.04); box-shadow: 0 6px 16px rgba(118, 75, 162, 0.25); }
   100% { transform: scale(1); }
 }
 
-/* Кастомний чекбокс з анімованою галочкою */
-.check-wrap {
-  position: relative;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.check-wrap input[type="checkbox"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  margin: 0;
-  cursor: pointer;
-}
-
-.check-box {
-  position: absolute;
-  inset: 0;
-  border: 2px solid #c9c2da;
-  border-radius: 7px;
-  background: #fff;
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
-}
-
-.check-wrap input:checked ~ .check-box {
-  background: #764ba2;
-  border-color: #764ba2;
-}
-
-.check-wrap:active .check-box {
-  transform: scale(0.88);
-}
-
-.check-icon {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.check-icon path {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 20;
-  stroke-dashoffset: 20;
-  transition: stroke-dashoffset 0.25s ease 0.05s;
-}
-
-.check-wrap input:checked ~ .check-icon path {
-  stroke-dashoffset: 0;
+.task-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .task-text {
   flex: 1;
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.4;
   color: #333;
   word-break: break-word;
   cursor: text;
   position: relative;
 }
 
-.task-item.completed .task-text {
+.task-card[data-status="done"] .task-text {
   color: #aaa;
 }
 
@@ -247,23 +323,101 @@ h1 {
   transition: width 0.35s ease;
 }
 
-.task-item.completed .task-text::after {
+.task-card[data-status="done"] .task-text::after {
   width: 100%;
 }
+
+/* Випадаючий список статусу: користувач обирає статус напряму */
+.status-select {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.status-select:hover {
+  filter: brightness(0.96);
+}
+
+.status-select:active {
+  transform: scale(0.97);
+}
+
+.status-select.status-todo { background-color: #ececef; color: #6b6b76; }
+.status-select.status-in_progress { background-color: #e0e7ff; color: #4338ca; }
+.status-select.status-paused { background-color: #fef3c7; color: #b45309; }
+.status-select.status-done { background-color: #d1fae5; color: #047857; }
+
+.task-card-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.status-select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Випадаючий список пріоритету */
+.priority-select {
+  flex-shrink: 0;
+  width: 42px;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 4px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.priority-select:hover {
+  filter: brightness(0.96);
+}
+
+.priority-select:active {
+  transform: scale(0.94);
+}
+
+.priority-select.priority-high { background-color: #fee2e2; }
+.priority-select.priority-medium { background-color: #fef3c7; }
+.priority-select.priority-low { background-color: #dcfce7; }
 
 .delete-btn {
   border: none;
   background: none;
   color: #c0392b;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   line-height: 1;
-  padding: 4px 6px;
+  padding: 2px 6px;
   border-radius: 6px;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .delete-btn:hover {
   background: #fdecea;
+  transform: scale(1.1);
+}
+
+.delete-btn:active {
+  transform: scale(0.9);
 }
 
 .empty-state {

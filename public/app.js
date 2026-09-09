@@ -1,19 +1,34 @@
 const API_URL = '/api/tasks';
 
+const STATUS_ORDER = ['todo', 'in_progress', 'paused', 'done'];
+const STATUS_META = {
+  todo: { label: 'Не розпочато' },
+  in_progress: { label: 'В процесі' },
+  paused: { label: 'На паузі' },
+  done: { label: 'Виконано' },
+};
+
+const PRIORITY_ORDER = ['high', 'medium', 'low'];
+const PRIORITY_META = {
+  high: { label: '🔴' },
+  medium: { label: '🟡' },
+  low: { label: '🟢' },
+};
+
 const form = document.getElementById('task-form');
 const input = document.getElementById('task-input');
-const list = document.getElementById('task-list');
+const priorityInput = document.getElementById('priority-input');
+const board = document.getElementById('board');
 const emptyState = document.getElementById('empty-state');
 const errorState = document.getElementById('error-state');
 const taskCount = document.getElementById('task-count');
 const clearCompletedBtn = document.getElementById('clear-completed');
-const filterButtons = document.querySelectorAll('.filter-btn');
 const progressBar = document.getElementById('progress-bar');
 const progressLabel = document.getElementById('progress-label');
 const confettiLayer = document.getElementById('confetti-layer');
+const bgLayers = document.querySelectorAll('.bg-layer');
 
 let tasks = [];
-let currentFilter = 'all';
 
 // --- Робота з API ---
 
@@ -40,11 +55,11 @@ async function loadTasks() {
   }
 }
 
-async function addTask(text) {
+async function addTask(text, priority) {
   try {
     const newTask = await apiRequest(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, priority }),
     });
     tasks.push(newTask);
     hideError();
@@ -91,71 +106,164 @@ async function clearCompletedTasks() {
   }
 }
 
-// --- Рендеринг ---
+function taskStatus(task) {
+  return task.status || (task.completed ? 'done' : 'todo');
+}
 
-function getFilteredTasks() {
-  if (currentFilter === 'active') return tasks.filter((t) => !t.completed);
-  if (currentFilter === 'completed') return tasks.filter((t) => t.completed);
-  return tasks;
+function taskPriority(task) {
+  return task.priority || 'medium';
 }
 
 function render() {
-  const filtered = getFilteredTasks();
-  list.innerHTML = '';
+  board.innerHTML = '';
 
-  filtered.forEach((task) => {
-    const li = document.createElement('li');
-    li.className = 'task-item' + (task.completed ? ' completed' : '');
-    li.dataset.id = task.id;
+  STATUS_ORDER.forEach((status) => {
+    const columnTasks = tasks
+      .filter((t) => taskStatus(t) === status)
+      .sort((a, b) => PRIORITY_ORDER.indexOf(taskPriority(a)) - PRIORITY_ORDER.indexOf(taskPriority(b)));
 
-    const checkWrap = document.createElement('label');
-    checkWrap.className = 'check-wrap';
+    const column = document.createElement('div');
+    column.className = 'column';
+    column.dataset.status = status;
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = task.completed;
-    checkbox.addEventListener('change', () => {
-      const willBeCompleted = checkbox.checked;
-      updateTask(task.id, { completed: willBeCompleted });
-      if (willBeCompleted) {
-        li.classList.add('just-completed');
-        setTimeout(() => li.classList.remove('just-completed'), 400);
-        spawnConfetti(checkWrap);
-      }
-    });
+    const header = document.createElement('div');
+    header.className = 'column-header';
 
-    const checkBoxVisual = document.createElement('span');
-    checkBoxVisual.className = 'check-box';
+    const title = document.createElement('span');
+    title.className = 'column-title';
+    title.textContent = STATUS_META[status].label;
 
-    const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    checkIcon.setAttribute('class', 'check-icon');
-    checkIcon.setAttribute('viewBox', '0 0 22 22');
-    checkIcon.innerHTML = '<path d="M5 11.5 L9.5 16 L17 6" />';
+    const count = document.createElement('span');
+    count.className = 'column-count';
+    count.textContent = columnTasks.length;
 
-    checkWrap.append(checkbox, checkBoxVisual, checkIcon);
+    header.append(title, count);
 
-    const span = document.createElement('span');
-    span.className = 'task-text';
-    span.textContent = task.text;
-    span.title = 'Натисніть, щоб редагувати';
-    span.addEventListener('click', () => startEditing(span, task));
+    const body = document.createElement('div');
+    body.className = 'column-body';
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = '✕';
-    deleteBtn.title = 'Видалити завдання';
-    deleteBtn.addEventListener('click', () => deleteTask(task.id));
+    if (columnTasks.length === 0) {
+      const emptyHint = document.createElement('div');
+      emptyHint.className = 'column-empty';
+      emptyHint.textContent = 'Порожньо';
+      body.appendChild(emptyHint);
+    } else {
+      columnTasks.forEach((task) => body.appendChild(buildTaskCard(task, status)));
+    }
 
-    li.append(checkWrap, span, deleteBtn);
-    list.appendChild(li);
+    column.append(header, body);
+    board.appendChild(column);
   });
 
-  emptyState.hidden = filtered.length !== 0;
+  emptyState.hidden = tasks.length !== 0;
 
   const activeCount = tasks.filter((t) => !t.completed).length;
   taskCount.textContent = `Активних: ${activeCount} з ${tasks.length}`;
 
   updateProgress();
+  updateBackgroundTheme();
+}
+
+function updateBackgroundTheme() {
+  const counts = { todo: 0, in_progress: 0, paused: 0, done: 0 };
+  tasks.forEach((t) => {
+    counts[taskStatus(t)] += 1;
+  });
+
+  let dominant = 'default';
+  let maxCount = 0;
+  let tie = false;
+
+  STATUS_ORDER.forEach((status) => {
+    if (counts[status] > maxCount) {
+      maxCount = counts[status];
+      dominant = status;
+      tie = false;
+    } else if (counts[status] === maxCount && maxCount > 0) {
+      tie = true;
+    }
+  });
+
+  if (maxCount === 0 || tie) {
+    dominant = 'default';
+  }
+
+  bgLayers.forEach((layer) => {
+    layer.classList.toggle('active', layer.dataset.theme === dominant);
+  });
+}
+
+function buildTaskCard(task, status) {
+  const priority = taskPriority(task);
+
+  const card = document.createElement('div');
+  card.className = 'task-card';
+  card.dataset.id = task.id;
+  card.dataset.status = status;
+  card.dataset.priority = priority;
+
+  const top = document.createElement('div');
+  top.className = 'task-card-top';
+
+  const span = document.createElement('span');
+  span.className = 'task-text';
+  span.textContent = task.text;
+  span.title = 'Натисніть, щоб редагувати';
+  span.addEventListener('click', () => startEditing(span, task));
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.textContent = '✕';
+  deleteBtn.title = 'Видалити завдання';
+  deleteBtn.addEventListener('click', () => {
+    card.classList.add('removing');
+    setTimeout(() => deleteTask(task.id), 200);
+  });
+
+  top.append(span, deleteBtn);
+
+  const controls = document.createElement('div');
+  controls.className = 'task-card-controls';
+
+  const statusSelect = document.createElement('select');
+  statusSelect.className = `status-select status-${status}`;
+  statusSelect.title = 'Обрати статус';
+
+  STATUS_ORDER.forEach((s) => {
+    const option = document.createElement('option');
+    option.value = s;
+    option.textContent = STATUS_META[s].label;
+    if (s === status) option.selected = true;
+    statusSelect.appendChild(option);
+  });
+
+  statusSelect.addEventListener('change', () => {
+    const newStatus = statusSelect.value;
+    updateTask(task.id, { status: newStatus });
+    if (newStatus === 'done') {
+      spawnConfetti(statusSelect);
+    }
+  });
+
+  const prioritySelect = document.createElement('select');
+  prioritySelect.className = `priority-select priority-${priority}`;
+  prioritySelect.title = 'Пріоритет завдання';
+
+  PRIORITY_ORDER.forEach((p) => {
+    const option = document.createElement('option');
+    option.value = p;
+    option.textContent = PRIORITY_META[p].label;
+    if (p === priority) option.selected = true;
+    prioritySelect.appendChild(option);
+  });
+
+  prioritySelect.addEventListener('change', () => {
+    updateTask(task.id, { priority: prioritySelect.value });
+  });
+
+  controls.append(statusSelect, prioritySelect);
+  card.append(top, controls);
+  return card;
 }
 
 function updateProgress() {
@@ -250,9 +358,10 @@ function startEditing(span, task) {
   editInput.type = 'text';
   editInput.value = task.text;
   editInput.className = 'task-text-edit';
-  editInput.style.flex = '1';
+  editInput.style.width = '100%';
   editInput.style.padding = '4px 6px';
-  editInput.style.fontSize = '15px';
+  editInput.style.fontSize = '14px';
+  editInput.style.fontFamily = 'inherit';
 
   span.replaceWith(editInput);
   editInput.focus();
@@ -286,17 +395,9 @@ form.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = input.value.trim();
   if (!text) return;
-  addTask(text);
+  addTask(text, priorityInput.value);
   input.value = '';
-});
-
-filterButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    filterButtons.forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentFilter = btn.dataset.filter;
-    render();
-  });
+  priorityInput.value = 'medium';
 });
 
 clearCompletedBtn.addEventListener('click', () => {

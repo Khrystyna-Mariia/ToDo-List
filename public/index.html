@@ -4,9 +4,21 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ToDo List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="bg-layer bg-default active" data-theme="default"></div>
+  <div class="bg-layer bg-todo" data-theme="todo"></div>
+  <div class="bg-layer bg-in_progress" data-theme="in_progress"></div>
+  <div class="bg-layer bg-paused" data-theme="paused"></div>
+  <div class="bg-layer bg-done" data-theme="done"></div>
+
   <div class="app">
     <h1>Мій список завдань</h1>
 
@@ -22,16 +34,15 @@
         placeholder="Введіть нове завдання..."
         autocomplete="off"
       />
+      <select id="priority-input" class="priority-input" title="Пріоритет">
+        <option value="low">🟢 Низький</option>
+        <option value="medium" selected>🟡 Середній</option>
+        <option value="high">🔴 Високий</option>
+      </select>
       <button type="submit">Додати</button>
     </form>
 
-    <div class="filters">
-      <button class="filter-btn active" data-filter="all">Усі</button>
-      <button class="filter-btn" data-filter="active">Активні</button>
-      <button class="filter-btn" data-filter="completed">Виконані</button>
-    </div>
-
-    <ul id="task-list" class="task-list"></ul>
+    <div id="board" class="board"></div>
 
     <p id="empty-state" class="empty-state" hidden>Завдань поки немає. Додайте перше!</p>
     <p id="error-state" class="error-state" hidden></p>
